@@ -29,46 +29,48 @@ async function seedIndicators() {
     INSERT INTO indicators (code, name, category, unit, description)
     VALUES
       ('homicide_rate_per_100k', 'Intentional homicide rate', 'crime', 'per 100,000', 'UNODC via OWID'),
-      ('conflict_deaths', 'Battle-related deaths', 'conflict', 'count', 'UCDP / OWID'),
-      ('calorie_supply', 'Average daily calorie supply', 'diet', 'kcal/person/day', 'FAO via OWID')
+      ('conflict_deaths', 'Deaths in armed conflicts', 'conflict', 'count', 'UCDP via OWID'),
+      ('calorie_supply', 'Daily calorie supply per person', 'diet', 'kcal/person/day', 'FAO via OWID')
     ON CONFLICT (code) DO NOTHING
   `);
   console.log('Seeded indicators');
 }
 
-async function fetchAndLoadOwidHomicide() {
-  const url = 'https://ourworldindata.org/grapher/homicide-rate-unodc.csv?v=1&csvType=full&useColumnShortNames=true';
-  console.log('Fetching OWID homicide data...');
+async function loadOwidSeries(url: string, indicatorCode: string, valueColIndex = 3, maxRows = 800) {
+  console.log(`Fetching ${indicatorCode}...`);
   const res = await fetch(url, { headers: { 'User-Agent': 'GPI-ETL/1.0' } });
-  if (!res.ok) throw new Error(`OWID fetch failed: ${res.status}`);
+  if (!res.ok) {
+    console.warn(`Fetch failed for ${indicatorCode}: ${res.status}`);
+    return;
+  }
   const text = await res.text();
   const lines = text.trim().split('\n');
-  const headers = lines[0].split(',');
-  console.log('OWID headers sample:', headers.slice(0, 6));
+  if (lines.length < 2) return;
 
   const sourceRes = await pool.query(`SELECT id FROM data_sources WHERE name = 'Our World in Data'`);
   const sourceId = sourceRes.rows[0]?.id;
-  const indRes = await pool.query(`SELECT id FROM indicators WHERE code = 'homicide_rate_per_100k'`);
+  const indRes = await pool.query(`SELECT id FROM indicators WHERE code = $1`, [indicatorCode]);
   const indicatorId = indRes.rows[0]?.id;
   if (!sourceId || !indicatorId) return;
 
   let loaded = 0;
-  for (const line of lines.slice(1, 500)) {
+  for (const line of lines.slice(1, maxRows)) {
     const cols = line.split(',');
-    if (cols.length < 4) continue;
-    const entity = cols[0];
+    if (cols.length <= valueColIndex) continue;
+    const entity = cols[0]?.replace(/"/g, '');
+    const code = cols[1]?.replace(/"/g, '') || null;
     const year = parseInt(cols[2], 10);
-    const value = parseFloat(cols[3]);
+    const value = parseFloat(cols[valueColIndex]);
     if (!entity || isNaN(year) || isNaN(value)) continue;
 
-    const loc = await pool.query(
+    const locRes = await pool.query(
       `INSERT INTO locations (name, level, iso3) VALUES ($1, 'country', $2)
        ON CONFLICT DO NOTHING RETURNING id`,
-      [entity, cols[1] || null]
+      [entity, code]
     );
-    let locId = loc.rows[0]?.id;
+    let locId = locRes.rows[0]?.id;
     if (!locId) {
-      const existing = await pool.query(`SELECT id FROM locations WHERE name = $1 AND level = 'country'`, [entity]);
+      const existing = await pool.query(`SELECT id FROM locations WHERE name = $1 AND level = 'country' LIMIT 1`, [entity]);
       locId = existing.rows[0]?.id;
     }
     if (!locId) continue;
@@ -81,7 +83,7 @@ async function fetchAndLoadOwidHomicide() {
     );
     loaded++;
   }
-  console.log(`Loaded ${loaded} OWID homicide observations (sample)`);
+  console.log(`Loaded ${loaded} observations for ${indicatorCode}`);
 }
 
 async function main() {
@@ -89,9 +91,22 @@ async function main() {
   await pool.query(schema);
   await seedSources();
   await seedIndicators();
-  await fetchAndLoadOwidHomicide();
+
+  await loadOwidSeries(
+    'https://ourworldindata.org/grapher/homicide-rate-unodc.csv?v=1&csvType=full&useColumnShortNames=true',
+    'homicide_rate_per_100k'
+  );
+  await loadOwidSeries(
+    'https://ourworldindata.org/grapher/daily-per-capita-caloric-supply.csv?v=1&csvType=full&useColumnShortNames=true',
+    'calorie_supply'
+  );
+  await loadOwidSeries(
+    'https://ourworldindata.org/grapher/deaths-in-armed-conflicts-by-country.csv?v=1&csvType=full&useColumnShortNames=true',
+    'conflict_deaths'
+  );
+
   await pool.end();
-  console.log('ETL bootstrap complete');
+  console.log('ETL complete');
 }
 
 main().catch(console.error);
