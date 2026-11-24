@@ -1,15 +1,31 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import fastifyStatic from '@fastify/static';
 import pg from 'pg';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const { Pool } = pg;
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 const app = Fastify({ logger: true });
 await app.register(cors, { origin: true });
+
+// Serve built frontend in production
+const clientDist = path.join(__dirname, '..', 'dist');
+try {
+  await app.register(fastifyStatic, {
+    root: clientDist,
+    prefix: '/'
+  });
+} catch (e) {
+  console.log('Static files not found (dev mode or not built yet)');
+}
 
 app.get('/api/health', async () => ({ status: 'ok', time: new Date().toISOString() }));
 
@@ -39,7 +55,7 @@ app.get('/api/observations', async (req) => {
     sql += ` AND i.code = $${params.length}`;
   }
   if (q.country) {
-    params.push(q.country);
+    params.push(`%${q.country}%`);
     sql += ` AND l.name ILIKE $${params.length}`;
   }
   sql += ` ORDER BY o.year DESC, l.name LIMIT $${params.length + 1}`;
@@ -50,4 +66,4 @@ app.get('/api/observations', async (req) => {
 
 const port = Number(process.env.PORT) || 8080;
 await app.listen({ port, host: '0.0.0.0' });
-console.log(`GPI API listening on ${port}`);
+console.log(`GPI API + frontend listening on ${port}`);
