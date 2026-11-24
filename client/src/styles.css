@@ -1,0 +1,45 @@
+:root {
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+* { box-sizing: border-box; }
+
+body { margin: 0; }
+
+.app {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  grid-template-columns: 1fr 320px;
+  height: 100vh;
+}
+
+header {
+  grid-column: 1 / -1;
+  padding: 1rem 1.5rem;
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+header h1 { margin: 0; font-size: 1.25rem; }
+header p { margin: 0.25rem 0 0; color: #64748b; font-size: 0.875rem; }
+
+.map {
+  min-height: 0;
+}
+
+aside {
+  background: white;
+  border-left: 1px solid #e2e8f0;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 60vh auto;
+  }
+  aside { border-left: none; border-top: 1px solid #e2e8f0; }
+}
