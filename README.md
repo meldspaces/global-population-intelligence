@@ -4,8 +4,11 @@
 
 How do food and drug consumption (stimulants, benzodiazepines, legal/illegal, recreational), diet trends, climate, and demographics correlate with violence, internationally recognized crime categories, social unrest, mental illness epidemics, political/economic instability, and armed conflict?
 
+## Status
+**Scaffold ready.** Core structure, PostGIS schema, Fastify API skeleton, MapLibre React frontend, and source seed ETL are in place.
+
 ## Live App
-*(Railway deployment pending initial data load)*
+*(Railway deployment pending — next step)*
 
 ## Core Principles
 - 100% statistical, unbiased, big-data driven.
@@ -14,10 +17,10 @@ How do food and drug consumption (stimulants, benzodiazepines, legal/illegal, re
 - Scalable: new sources and metrics added over time.
 
 ## Stack (Nov 2026)
-- **Frontend**: Vite + React + TypeScript + MapLibre GL JS + deck.gl + ECharts + Tailwind
+- **Frontend**: Vite + React 19 + TypeScript + MapLibre GL JS + ECharts
 - **Backend**: Node.js + Fastify
 - **Database**: PostgreSQL 17 + PostGIS 3.5 (Railway)
-- **ETL**: Scheduled Node jobs + weekly source-discovery routine
+- **ETL**: Node jobs + weekly source-discovery routine
 - **Sheets**: Google Apps Script / Python connector from post-ETL views
 
 ## Quick Start (Local)
@@ -25,7 +28,9 @@ How do food and drug consumption (stimulants, benzodiazepines, legal/illegal, re
 cp .env.example .env
 docker compose up -d   # PostGIS
 npm install
-npm run dev
+npm run etl             # apply schema + seed sources
+npm run dev             # Vite frontend (proxies /api)
+npm run server          # Fastify API
 ```
 
 ## Documentation
