@@ -36,6 +36,12 @@ aside {
   overflow-y: auto;
 }
 
+aside ul { list-style: none; padding: 0; margin: 0; }
+aside li { margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e2e8f0; }
+aside a { font-weight: 600; color: #0f172a; text-decoration: none; }
+aside .desc { font-size: 0.8rem; color: #475569; margin-top: 0.25rem; }
+aside .meta { font-size: 0.75rem; color: #64748b; margin-top: 0.25rem; }
+
 @media (max-width: 768px) {
   .app {
     grid-template-columns: 1fr;
