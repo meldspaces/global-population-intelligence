@@ -5,6 +5,7 @@ import pg from 'pg';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 import { runETL } from './etl.js';
 
 dotenv.config();
@@ -17,18 +18,36 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const app = Fastify({ logger: true });
 await app.register(cors, { origin: true });
 
-// Serve built frontend in production
-const clientDist = path.join(__dirname, '..', 'dist');
-try {
+// Resolve dist path robustly
+const possibleDists = [
+  path.join(__dirname, '..', 'dist'),
+  path.join(process.cwd(), 'dist'),
+  path.join(process.cwd(), 'client', 'dist')
+];
+const clientDist = possibleDists.find(p => fs.existsSync(path.join(p, 'index.html'))) || possibleDists[0];
+
+console.log('Serving static from:', clientDist, 'exists:', fs.existsSync(clientDist));
+
+if (fs.existsSync(clientDist)) {
   await app.register(fastifyStatic, {
     root: clientDist,
-    prefix: '/'
+    prefix: '/',
+    decorateReply: false
   });
-} catch (e) {
-  console.log('Static files not found (dev mode or not built yet)');
+
+  // SPA fallback
+  app.setNotFoundHandler((req, reply) => {
+    if (req.raw.url?.startsWith('/api/')) {
+      return reply.code(404).send({ error: 'Not found' });
+    }
+    return reply.sendFile('index.html', clientDist);
+  });
+} else {
+  console.error('Frontend build not found at any expected path');
+  app.get('/', async () => ({ error: 'Frontend not built', searched: possibleDists }));
 }
 
-app.get('/api/health', async () => ({ status: 'ok', time: new Date().toISOString() }));
+app.get('/api/health', async () => ({ status: 'ok', time: new Date().toISOString(), dist: clientDist }));
 
 app.get('/api/sources', async () => {
   const { rows } = await pool.query('SELECT * FROM data_sources ORDER BY name');
@@ -90,5 +109,4 @@ const port = Number(process.env.PORT) || 8080;
 await app.listen({ port, host: '0.0.0.0' });
 console.log(`GPI API + frontend listening on ${port}`);
 
-// Run data check after server is listening
 ensureData().catch(console.error);
