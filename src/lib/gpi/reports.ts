@@ -14,7 +14,8 @@ export type ReportCard = {
 };
 
 export type AnalysisBlock =
-  | { type: "heading" | "paragraph"; text: string }
+  | { type: "heading"; text: string }
+  | { type: "paragraph"; text: string }
   | { type: "stat_year"; series: string; year: number }
   | { type: "stat_top"; series: string; year: number; n: number }
   | { type: "stat_focus"; series: string; year: number; iso: string };
