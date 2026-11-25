@@ -83,7 +83,7 @@ A report page must:
 
 ## Backlog
 
-- [ ] Report page template that meets the contract (flexible, responsive, dynamic, formatted analysis, sources)
+- [x] Report page template that meets the contract (flexible, responsive, dynamic, formatted analysis, sources)
 - [ ] Home page prioritizes reports from current public interest
 - [ ] First full report for the leading trending topic that the warehouse can support, including validated articles and posts, bias marks, people, and sources
 - [ ] Further reports as new topics take the lead. Retire or demote a report when interest fades
@@ -95,4 +95,4 @@ A report page must:
 
 - 2026-11-25 baseline: six OWID series, map, charts, status bar, featured strip. Production build green.
 - 2026-11-25 plan: public-interest research now drives report priority, home-page order, and written analysis. Report contract added.
-- 2026-11-25 database: Railway PostGIS is sufficient for the warehouse. Reports and daily findings will be tables on that same database.
+- 2026-11-25 report shell: year, country, map click, and chart mode now recompute the figures on each report page. Railway is serving the atlas.

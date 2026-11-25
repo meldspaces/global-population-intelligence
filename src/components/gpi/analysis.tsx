@@ -79,13 +79,24 @@ function Stat({ block }: { block: AnalysisBlock }) {
   return null;
 }
 
-export function Analysis({ blocks }: { blocks: AnalysisBlock[] }) {
+export function Analysis({
+  blocks,
+  year,
+  iso,
+}: {
+  blocks: AnalysisBlock[];
+  year?: number;
+  iso?: string;
+}) {
   return (
     <div className="analysis">
       {blocks.map((block, index) => {
         if (block.type === "heading") return <h3 key={index}>{block.text}</h3>;
         if (block.type === "paragraph") return <p key={index}>{block.text}</p>;
-        return <Stat key={index} block={block} />;
+        if (block.type === "stat_focus") {
+          return <Stat key={index} block={{ ...block, year: year ?? block.year, iso: iso ?? block.iso }} />;
+        }
+        return <Stat key={index} block={{ ...block, year: year ?? block.year }} />;
       })}
     </div>
   );
