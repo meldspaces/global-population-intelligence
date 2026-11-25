@@ -35,7 +35,6 @@ if (fs.existsSync(clientDist)) {
     decorateReply: false
   });
 
-  // SPA fallback
   app.setNotFoundHandler((req, reply) => {
     if (req.raw.url?.startsWith('/api/')) {
       return reply.code(404).send({ error: 'Not found' });
@@ -50,41 +49,56 @@ if (fs.existsSync(clientDist)) {
 app.get('/api/health', async () => ({ status: 'ok', time: new Date().toISOString(), dist: clientDist }));
 
 app.get('/api/sources', async () => {
-  const { rows } = await pool.query('SELECT * FROM data_sources ORDER BY name');
-  return rows;
+  try {
+    const { rows } = await pool.query('SELECT * FROM data_sources ORDER BY name');
+    return rows;
+  } catch (err) {
+    console.error('sources query failed:', err);
+    return [];
+  }
 });
 
 app.get('/api/indicators', async () => {
-  const { rows } = await pool.query('SELECT * FROM indicators ORDER BY category, name');
-  return rows;
+  try {
+    const { rows } = await pool.query('SELECT * FROM indicators ORDER BY category, name');
+    return rows;
+  } catch (err) {
+    console.error('indicators query failed:', err);
+    return [];
+  }
 });
 
 app.get('/api/observations', async (req) => {
   const q = req.query as { indicator?: string; country?: string; limit?: string };
   const limit = Math.min(Number(q.limit) || 200, 1000);
-  let sql = `
-    SELECT o.year, o.value, l.name AS location, i.code AS indicator, i.name AS indicator_name
-    FROM observations o
-    JOIN locations l ON l.id = o.location_id
-    JOIN indicators i ON i.id = o.indicator_id
-    WHERE 1=1
-  `;
-  const params: any[] = [];
-  if (q.indicator) {
-    params.push(q.indicator);
-    sql += ` AND i.code = $${params.length}`;
+  try {
+    let sql = `
+      SELECT o.year, o.value, l.name AS location, i.code AS indicator, i.name AS indicator_name
+      FROM observations o
+      JOIN locations l ON l.id = o.location_id
+      JOIN indicators i ON i.id = o.indicator_id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+    if (q.indicator) {
+      params.push(q.indicator);
+      sql += ` AND i.code = $${params.length}`;
+    }
+    if (q.country) {
+      params.push(`%${q.country}%`);
+      sql += ` AND l.name ILIKE $${params.length}`;
+    }
+    sql += ` ORDER BY o.year DESC, l.name LIMIT $${params.length + 1}`;
+    params.push(limit);
+    const { rows } = await pool.query(sql, params);
+    return rows;
+  } catch (err) {
+    console.error('observations query failed:', err);
+    return [];
   }
-  if (q.country) {
-    params.push(`%${q.country}%`);
-    sql += ` AND l.name ILIKE $${params.length}`;
-  }
-  sql += ` ORDER BY o.year DESC, l.name LIMIT $${params.length + 1}`;
-  params.push(limit);
-  const { rows } = await pool.query(sql, params);
-  return rows;
 });
 
-// Auto-run ETL if observations table is empty
+// Auto-run ETL if observations table is empty (non-blocking)
 async function ensureData() {
   try {
     const { rows } = await pool.query('SELECT COUNT(*)::int AS n FROM observations');
@@ -109,4 +123,5 @@ const port = Number(process.env.PORT) || 8080;
 await app.listen({ port, host: '0.0.0.0' });
 console.log(`GPI API + frontend listening on ${port}`);
 
+// Start ETL after listen so the server is immediately responsive
 ensureData().catch(console.error);
