@@ -5,6 +5,7 @@ import pg from 'pg';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { runETL } from './etl.js';
 
 dotenv.config();
 
@@ -64,6 +65,30 @@ app.get('/api/observations', async (req) => {
   return rows;
 });
 
+// Auto-run ETL if observations table is empty
+async function ensureData() {
+  try {
+    const { rows } = await pool.query('SELECT COUNT(*)::int AS n FROM observations');
+    if (rows[0].n === 0) {
+      console.log('Observations empty — running ETL...');
+      await runETL(pool);
+      console.log('Initial ETL finished');
+    } else {
+      console.log(`Observations already populated (${rows[0].n} rows)`);
+    }
+  } catch (err) {
+    console.warn('ETL check/run failed (schema may not exist yet):', err);
+    try {
+      await runETL(pool);
+    } catch (e) {
+      console.error('ETL failed:', e);
+    }
+  }
+}
+
 const port = Number(process.env.PORT) || 8080;
 await app.listen({ port, host: '0.0.0.0' });
 console.log(`GPI API + frontend listening on ${port}`);
+
+// Run data check after server is listening
+ensureData().catch(console.error);
