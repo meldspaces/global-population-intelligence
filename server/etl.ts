@@ -3,9 +3,23 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 
 dotenv.config();
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 
-async function seedSources() {
+export async function runETL(pool: pg.Pool) {
+  const schema = fs.readFileSync('./schema/postgres_postgis.sql', 'utf8');
+  await pool.query(schema);
+  console.log('Schema applied');
+
+  await seedSources(pool);
+  await seedIndicators(pool);
+
+  await loadOwidSeries(pool, 'https://ourworldindata.org/grapher/homicide-rate-unodc.csv?v=1&csvType=full&useColumnShortNames=true', 'homicide_rate_per_100k');
+  await loadOwidSeries(pool, 'https://ourworldindata.org/grapher/daily-per-capita-caloric-supply.csv?v=1&csvType=full&useColumnShortNames=true', 'calorie_supply');
+  await loadOwidSeries(pool, 'https://ourworldindata.org/grapher/deaths-in-armed-conflicts-by-country.csv?v=1&csvType=full&useColumnShortNames=true', 'conflict_deaths');
+
+  console.log('ETL complete');
+}
+
+async function seedSources(pool: pg.Pool) {
   const sources = [
     { name: 'Our World in Data', url: 'https://ourworldindata.org', description: 'Homicide, conflict, diet, health indicators with Chart Data API', coverage_start: 1950, coverage_end: 2026, geo_level: 'country', update_frequency: 'annual', trust_score: 0.95 },
     { name: 'World Bank WDI', url: 'https://data.worldbank.org', description: 'Economic, demographic, health, and climate proxies', coverage_start: 1960, coverage_end: 2026, geo_level: 'country', update_frequency: 'annual', trust_score: 0.93 },
@@ -24,7 +38,7 @@ async function seedSources() {
   console.log('Seeded data_sources');
 }
 
-async function seedIndicators() {
+async function seedIndicators(pool: pg.Pool) {
   await pool.query(`
     INSERT INTO indicators (code, name, category, unit, description)
     VALUES
@@ -36,7 +50,7 @@ async function seedIndicators() {
   console.log('Seeded indicators');
 }
 
-async function loadOwidSeries(url: string, indicatorCode: string, valueColIndex = 3, maxRows = 800) {
+async function loadOwidSeries(pool: pg.Pool, url: string, indicatorCode: string, valueColIndex = 3, maxRows = 800) {
   console.log(`Fetching ${indicatorCode}...`);
   const res = await fetch(url, { headers: { 'User-Agent': 'GPI-ETL/1.0' } });
   if (!res.ok) {
@@ -86,27 +100,10 @@ async function loadOwidSeries(url: string, indicatorCode: string, valueColIndex 
   console.log(`Loaded ${loaded} observations for ${indicatorCode}`);
 }
 
-async function main() {
-  const schema = fs.readFileSync('./schema/postgres_postgis.sql', 'utf8');
-  await pool.query(schema);
-  await seedSources();
-  await seedIndicators();
-
-  await loadOwidSeries(
-    'https://ourworldindata.org/grapher/homicide-rate-unodc.csv?v=1&csvType=full&useColumnShortNames=true',
-    'homicide_rate_per_100k'
-  );
-  await loadOwidSeries(
-    'https://ourworldindata.org/grapher/daily-per-capita-caloric-supply.csv?v=1&csvType=full&useColumnShortNames=true',
-    'calorie_supply'
-  );
-  await loadOwidSeries(
-    'https://ourworldindata.org/grapher/deaths-in-armed-conflicts-by-country.csv?v=1&csvType=full&useColumnShortNames=true',
-    'conflict_deaths'
-  );
-
-  await pool.end();
-  console.log('ETL complete');
+// Standalone runner
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  runETL(pool)
+    .then(() => pool.end())
+    .catch(console.error);
 }
-
-main().catch(console.error);
