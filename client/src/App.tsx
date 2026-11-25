@@ -5,6 +5,13 @@ import ReactECharts from 'echarts-for-react';
 
 type Source = { id: number; name: string; description: string; url: string; trust_score: number };
 type Obs = { year: number; value: number; location: string; indicator: string; indicator_name: string };
+type StatusSource = { name: string; last_checked: string | null; trust_score: number; observation_count: number };
+type Status = {
+  etl: { running: boolean; lastStarted: string | null; lastFinished: string | null; lastError: string | null; message: string };
+  totalObservations: number;
+  sources: StatusSource[];
+  error?: string;
+};
 
 const INDICATORS = [
   { code: 'homicide_rate_per_100k', name: 'Homicide rate (per 100k)' },
@@ -19,6 +26,7 @@ export default function App() {
   const [indicator, setIndicator] = useState('homicide_rate_per_100k');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<Status | null>(null);
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -36,8 +44,8 @@ export default function App() {
     setLoading(true);
     setError(null);
     Promise.all([
-      fetch('/api/sources').then(r => r.ok ? r.json() : Promise.reject('sources failed')),
-      fetch(`/api/observations?indicator=${indicator}&limit=120`).then(r => r.ok ? r.json() : Promise.reject('observations failed'))
+      fetch('/api/sources').then(r => r.ok ? r.json() : []),
+      fetch(`/api/observations?indicator=${indicator}&limit=120`).then(r => r.ok ? r.json() : [])
     ])
       .then(([src, obs]) => {
         setSources(src);
@@ -46,6 +54,15 @@ export default function App() {
       .catch(err => setError(String(err)))
       .finally(() => setLoading(false));
   }, [indicator]);
+
+  useEffect(() => {
+    const poll = () => {
+      fetch('/api/status').then(r => r.json()).then(setStatus).catch(() => {});
+    };
+    poll();
+    const id = setInterval(poll, 5000);
+    return () => clearInterval(id);
+  }, []);
 
   const chartOption = {
     title: { text: INDICATORS.find(i => i.code === indicator)?.name || 'Trend', left: 'center', textStyle: { fontSize: 14 } },
@@ -74,13 +91,13 @@ export default function App() {
           </select>
           {loading && <p className="status">Loading data…</p>}
           {error && <p className="status error">Error: {error}</p>}
-          {!loading && !error && <ReactECharts option={chartOption} style={{ height: 240 }} />}
+          {!loading && !error && series.length === 0 && <p className="status">No observations yet</p>}
+          {!loading && !error && series.length > 0 && <ReactECharts option={chartOption} style={{ height: 240 }} />}
         </div>
       </div>
       <aside>
         <h2>Data Sources</h2>
         {loading && <p>Loading registry…</p>}
-        {error && <p className="error">{error}</p>}
         <ul>
           {sources.map(s => (
             <li key={s.id}>
@@ -91,6 +108,20 @@ export default function App() {
           ))}
         </ul>
       </aside>
+      <footer className="status-bar">
+        <div className="etl">
+          ETL: {status?.etl.running ? 'running…' : status?.etl.message || 'idle'}
+          {status?.etl.lastError && <span className="error"> — {status.etl.lastError}</span>}
+          {status && <span> · {status.totalObservations} total observations</span>}
+        </div>
+        <div className="source-status">
+          {status?.sources.map(s => (
+            <span key={s.name} className={s.observation_count > 0 ? 'ok' : 'empty'}>
+              {s.name}: {s.observation_count}
+            </span>
+          ))}
+        </div>
+      </footer>
     </div>
   );
 }
