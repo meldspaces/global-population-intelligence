@@ -17,6 +17,8 @@ export default function App() {
   const [sources, setSources] = useState<Source[]>([]);
   const [series, setSeries] = useState<Obs[]>([]);
   const [indicator, setIndicator] = useState('homicide_rate_per_100k');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -31,14 +33,18 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    fetch('/api/sources').then(r => r.json()).then(setSources).catch(() => setSources([]));
-  }, []);
-
-  useEffect(() => {
-    fetch(`/api/observations?indicator=${indicator}&limit=120`)
-      .then(r => r.json())
-      .then(setSeries)
-      .catch(() => setSeries([]));
+    setLoading(true);
+    setError(null);
+    Promise.all([
+      fetch('/api/sources').then(r => r.ok ? r.json() : Promise.reject('sources failed')),
+      fetch(`/api/observations?indicator=${indicator}&limit=120`).then(r => r.ok ? r.json() : Promise.reject('observations failed'))
+    ])
+      .then(([src, obs]) => {
+        setSources(src);
+        setSeries(obs);
+      })
+      .catch(err => setError(String(err)))
+      .finally(() => setLoading(false));
   }, [indicator]);
 
   const chartOption = {
@@ -66,12 +72,15 @@ export default function App() {
           <select value={indicator} onChange={e => setIndicator(e.target.value)} className="indicator-select">
             {INDICATORS.map(i => <option key={i.code} value={i.code}>{i.name}</option>)}
           </select>
-          <ReactECharts option={chartOption} style={{ height: 260 }} />
+          {loading && <p className="status">Loading data…</p>}
+          {error && <p className="status error">Error: {error}</p>}
+          {!loading && !error && <ReactECharts option={chartOption} style={{ height: 240 }} />}
         </div>
       </div>
       <aside>
         <h2>Data Sources</h2>
-        {sources.length === 0 && <p>Loading registry…</p>}
+        {loading && <p>Loading registry…</p>}
+        {error && <p className="error">{error}</p>}
         <ul>
           {sources.map(s => (
             <li key={s.id}>
