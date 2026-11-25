@@ -173,7 +173,9 @@ export default defineConfig(({ command, isPreview }) => ({
             // Railway runs a long-lived Node server. The Grok preview build stays
             // on the Vercel preset unless this process is a Railway build.
             preset:
-              process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID
+              process.env.RAILWAY_ENVIRONMENT ||
+              process.env.RAILWAY_PROJECT_ID ||
+              process.env.GPI_RAILWAY === "1"
                 ? "node-server"
                 : "vercel",
             // Auto-registers server/middleware/* (the PWA install page +

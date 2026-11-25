@@ -1,0 +1,5 @@
+# Forces the Node server build even if Railway has not injected its own
+# environment into the Nixpacks build phase yet.
+[variables]
+NIXPACKS_NODE_VERSION = "22"
+GPI_RAILWAY = "1"
