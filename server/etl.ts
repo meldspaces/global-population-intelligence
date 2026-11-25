@@ -7,14 +7,17 @@ dotenv.config();
 export async function runETL(pool: pg.Pool) {
   const schema = fs.readFileSync('./schema/postgres_postgis.sql', 'utf8');
   await pool.query(schema);
+  // Widen iso3 if it was CHAR(3)
+  await pool.query(`ALTER TABLE locations ALTER COLUMN iso3 TYPE TEXT`).catch(() => {});
+  await pool.query(`ALTER TABLE locations ALTER COLUMN iso2 TYPE TEXT`).catch(() => {});
   console.log('Schema applied');
 
   await seedSources(pool);
   await seedIndicators(pool);
 
-  await loadOwidSeries(pool, 'https://ourworldindata.org/grapher/homicide-rate-unodc.csv?v=1&csvType=full&useColumnShortNames=true', 'homicide_rate_per_100k');
-  await loadOwidSeries(pool, 'https://ourworldindata.org/grapher/daily-per-capita-caloric-supply.csv?v=1&csvType=full&useColumnShortNames=true', 'calorie_supply');
-  await loadOwidSeries(pool, 'https://ourworldindata.org/grapher/deaths-in-armed-conflicts-by-country.csv?v=1&csvType=full&useColumnShortNames=true', 'conflict_deaths');
+  await loadOwidSeries(pool, 'https://ourworldindata.org/grapher/homicide-rate-unodc.csv?v=1&csvType=full&useColumnShortNames=true', 'homicide_rate_per_100k', 3, 2000);
+  await loadOwidSeries(pool, 'https://ourworldindata.org/grapher/daily-per-capita-caloric-supply.csv?v=1&csvType=full&useColumnShortNames=true', 'calorie_supply', 3, 2000);
+  await loadOwidSeries(pool, 'https://ourworldindata.org/grapher/deaths-in-armed-conflicts-by-country.csv?v=1&csvType=full&useColumnShortNames=true', 'conflict_deaths', 3, 2000);
 
   console.log('ETL complete');
 }
@@ -50,7 +53,14 @@ async function seedIndicators(pool: pg.Pool) {
   console.log('Seeded indicators');
 }
 
-async function loadOwidSeries(pool: pg.Pool, url: string, indicatorCode: string, valueColIndex = 3, maxRows = 800) {
+function safeCode(raw: string | null): string | null {
+  if (!raw) return null;
+  const c = raw.replace(/"/g, '').trim();
+  if (!c || c.length > 8) return null; // skip OWID region codes that are too long
+  return c;
+}
+
+async function loadOwidSeries(pool: pg.Pool, url: string, indicatorCode: string, valueColIndex = 3, maxRows = 2000) {
   console.log(`Fetching ${indicatorCode}...`);
   const res = await fetch(url, { headers: { 'User-Agent': 'GPI-ETL/1.0' } });
   if (!res.ok) {
@@ -71,31 +81,35 @@ async function loadOwidSeries(pool: pg.Pool, url: string, indicatorCode: string,
   for (const line of lines.slice(1, maxRows)) {
     const cols = line.split(',');
     if (cols.length <= valueColIndex) continue;
-    const entity = cols[0]?.replace(/"/g, '');
-    const code = cols[1]?.replace(/"/g, '') || null;
+    const entity = cols[0]?.replace(/"/g, '').trim();
+    const code = safeCode(cols[1]);
     const year = parseInt(cols[2], 10);
     const value = parseFloat(cols[valueColIndex]);
     if (!entity || isNaN(year) || isNaN(value)) continue;
 
-    const locRes = await pool.query(
-      `INSERT INTO locations (name, level, iso3) VALUES ($1, 'country', $2)
-       ON CONFLICT DO NOTHING RETURNING id`,
-      [entity, code]
-    );
-    let locId = locRes.rows[0]?.id;
-    if (!locId) {
-      const existing = await pool.query(`SELECT id FROM locations WHERE name = $1 AND level = 'country' LIMIT 1`, [entity]);
-      locId = existing.rows[0]?.id;
-    }
-    if (!locId) continue;
+    try {
+      const locRes = await pool.query(
+        `INSERT INTO locations (name, level, iso3) VALUES ($1, 'country', $2)
+         ON CONFLICT DO NOTHING RETURNING id`,
+        [entity, code]
+      );
+      let locId = locRes.rows[0]?.id;
+      if (!locId) {
+        const existing = await pool.query(`SELECT id FROM locations WHERE name = $1 AND level = 'country' LIMIT 1`, [entity]);
+        locId = existing.rows[0]?.id;
+      }
+      if (!locId) continue;
 
-    await pool.query(
-      `INSERT INTO observations (year, location_id, indicator_id, value, is_estimate, source_id)
-       VALUES ($1,$2,$3,$4,false,$5)
-       ON CONFLICT (year, location_id, indicator_id, source_id) DO UPDATE SET value = EXCLUDED.value`,
-      [year, locId, indicatorId, value, sourceId]
-    );
-    loaded++;
+      await pool.query(
+        `INSERT INTO observations (year, location_id, indicator_id, value, is_estimate, source_id)
+         VALUES ($1,$2,$3,$4,false,$5)
+         ON CONFLICT (year, location_id, indicator_id, source_id) DO UPDATE SET value = EXCLUDED.value`,
+        [year, locId, indicatorId, value, sourceId]
+      );
+      loaded++;
+    } catch (e) {
+      // skip bad rows
+    }
   }
   console.log(`Loaded ${loaded} observations for ${indicatorCode}`);
 }
