@@ -1,0 +1,10 @@
+{
+  "at": "2026-11-25T19:30:00.000Z",
+  "ok": true,
+  "note": "Baseline. Typecheck, warehouse regression, production build, and a waited production render all passed. Preview updates with the dev server. Public publish is the user's publish action; no deploy credential is available here.",
+  "results": [
+    { "cmd": "node --experimental-strip-types --test src/lib/gpi/warehouse.test.ts", "status": 0 },
+    { "cmd": "npm run typecheck", "status": 0 },
+    { "cmd": "npm run build", "status": 0 }
+  ]
+}

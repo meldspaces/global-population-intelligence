@@ -1,5 +1,11 @@
-node_modules/
-dist/
-.env
+node_modules
+.vercel
+.output
+.nitro
+screenshots
+artifacts
 *.log
+.env
+.env.*
 .DS_Store
+dist

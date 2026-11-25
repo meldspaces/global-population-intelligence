@@ -1,6 +1,7 @@
--- Global Population Intelligence Schema (Postgres + PostGIS)
--- Focus: indicators, observations, locations, sources, correlations
--- Yearly granularity; city-level where available
+-- Warehouse tables for the Railway PostGIS database.
+-- Not applied by the preview (no PostGIS extension there).
+-- Reports and findings are in migrations/ and apply on Railway at startup.
+-- Never delete observations. Refresh them.
 
 CREATE EXTENSION IF NOT EXISTS postgis;
 
@@ -11,7 +12,7 @@ CREATE TABLE IF NOT EXISTS data_sources (
   url TEXT,
   coverage_start INT,
   coverage_end INT,
-  geo_level TEXT, -- country | admin1 | city
+  geo_level TEXT,
   update_frequency TEXT,
   trust_score NUMERIC(3,2),
   last_checked TIMESTAMPTZ,
@@ -23,7 +24,7 @@ CREATE TABLE IF NOT EXISTS locations (
   iso2 TEXT,
   iso3 TEXT,
   name TEXT NOT NULL,
-  level TEXT NOT NULL, -- country | admin1 | city
+  level TEXT NOT NULL,
   parent_id INT REFERENCES locations(id),
   geom GEOMETRY(Geometry, 4326),
   centroid GEOMETRY(Point, 4326),
@@ -36,9 +37,9 @@ CREATE INDEX IF NOT EXISTS idx_locations_name ON locations(name);
 
 CREATE TABLE IF NOT EXISTS indicators (
   id SERIAL PRIMARY KEY,
-  code TEXT UNIQUE NOT NULL, -- e.g. homicide_rate_per_100k, amphetamine_prevalence
+  code TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
-  category TEXT, -- drug | crime | diet | climate | conflict | economic
+  category TEXT,
   unit TEXT,
   description TEXT
 );
@@ -67,5 +68,3 @@ CREATE TABLE IF NOT EXISTS conflicts (
   location_ids INT[],
   source_id INT REFERENCES data_sources(id)
 );
-
-COMMENT ON TABLE observations IS 'Core fact table. All values carry source and estimate flag.';
