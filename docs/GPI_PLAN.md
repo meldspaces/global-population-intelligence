@@ -1,10 +1,10 @@
 # Global Population Intelligence — autopilot plan
 
-Baseline date: 2026-11-25. The preview is the product. Do not replace the Railway app with this workspace. The warehouse database stays the existing Railway PostGIS.
+Baseline date: 2026-11-25. The live app is the Railway service. The warehouse database is the existing Railway PostgreSQL 17 + PostGIS database. Do not add a second database.
 
 ## Purpose
 
-Regular public-interest research drives development. The ambitious target is a routine that truly runs on autopilot: each pass finds what people are talking about now, then advances the app toward reporting the statistical trends tied to those topics.
+Regular public-interest research drives development. Each pass finds what people are talking about now, writes that finding down, and advances one slice of reporting on the statistical trends tied to those topics.
 
 That research decides three things:
 
@@ -14,55 +14,51 @@ That research decides three things:
 
 The atlas (map, status bar, warehouse charts) stays. Reports are the reading layer on top of it. A trending topic with thin evidence can still be featured, but the page must say the evidence is thin.
 
+The visual system stays paper, ink, and copper. A pass may improve spacing, type, contrast, or a control. It does not introduce a new palette, a new type system, or decorative chrome.
+
 ## Database
 
-The warehouse of record is the Railway PostgreSQL 17 + PostGIS 3.5 database named in `docs/PLANNING.md` of `meldspaces/global-population-intelligence`. It is sufficient. Do not add Neon, a second Postgres, or a new host.
+The warehouse of record is the Railway PostGIS database. It is sufficient.
 
-What already fits, in `schema/postgres_postgis.sql`:
+- `observations` is the fact table: year, location, indicator, value, source, and an estimate flag.
+- `locations.geom` holds country polygons, and later city boundaries where a real boundary exists.
+- `indicators` and `data_sources` cover new series. Drugs, refugees, and food insecurity are new rows, not a new database.
+- `interest_findings` stores each day's public-interest research so the next run can read it. Rows are inserted, never deleted.
+- `reports` are ranked by priority and never deleted. Refresh and re-rank only.
+- `report_links` and `report_people` hold cited articles, posts, bias marks, and named public figures.
 
-- `observations` is the fact table: year, location, indicator, value, source, and an estimate flag. About 50,000 country-year points today, and a few hundred thousand later, are a small table for this server. Storage stays in the tens of megabytes even with indexes.
-- `locations.geom` is the right place for country polygons, and later for cities where a real boundary exists.
-- `indicators` and `data_sources` already cover new series. Drugs, refugees, and food insecurity are new rows, not a new database.
-
-What that schema does not have yet, and what gets added on the same database, never a new one:
-
-- `interest_findings` for each day's public-interest research, so the next run can read it.
-- `reports`, ranked by priority and never deleted. Refresh and re-rank only.
-- `report_links` and `report_people` for cited articles, posts, bias marks, and named people.
-
-The live Railway service currently holds a sample load, not the full series. That is a loader limit, not a PostGIS limit. This workspace has no `DATABASE_URL`, so the preview keeps the JSON snapshot until that variable is available. Schema changes are written for that PostGIS database and applied there when the connection is present.
+The atlas still reads the shipped country-year snapshot in `src/lib/gpi/warehouse.json` for the six series. New series land in that snapshot and, when a loader is ready, in `observations`. Schema changes are SQL files in `migrations/` and are applied on process start when `DATABASE_URL` is set.
 
 ## Report page contract
 
-Each report is one topic, and it is a comprehensive analysis. The first unfinished item in the backlog is the work, unless the preview is broken.
+Each report is one topic. The first unfinished item in the backlog is the work, unless the live app is broken.
 
 A report page must:
 
-- Stay flexible. Map, year, country, chart mode, and which series are in view all respond to the topic. Do not freeze one story into a layout that cannot show the next topic.
+- Stay flexible. Map, year, country, chart mode, and which series are in view all respond to the topic.
 - Work on phones, tablets, and desktops. No horizontal overflow. Controls stay usable by touch.
-- Stay dynamic. Figures in the analysis are computed from the warehouse or from a cited table in the repo. Changing the year or country updates every figure that depends on it. Do not paste statistics into prose.
-- Format the analysis as a headline, a dek, an as-of date, and short sections: what is happening, what the numbers show, and what we cannot say. No walls of text. No emoji.
-- List related articles and social posts. Each item has a title or excerpt, author or account, date, URL, a relevance score from 0 to 100, and a one-line reason. Drop anything under 60, or show it only as weak context. Validate before including: the URL is real, the item is about this topic, and the date is real. Do not invent posts.
-- Show a left/right bias scale separately for the author, the social account, and the post when those differ. The only allowed values are Left, Lean left, Center, Lean right, Right, and Unrated. Use a published rating (AllSides, Ad Fontes, Media Bias/Fact Check, or the outlet's own disclosed stance) and name the rater plus the date checked. If no published rating exists, the value is Unrated. Never invent a score. Bias is not relevance and is not accuracy. Show those three apart.
-- List relevant people only when a cited source for this topic names them. Give the name, the role, and the source. Omit the section when nobody qualifies.
-- State the data sources used in the analysis on the page: series name, publisher, and URL. Every figure traces to one of those sources.
+- Stay dynamic. Figures are computed. Changing the year or country updates every figure that depends on it. Do not paste statistics into prose.
+- Format the analysis as a headline, a dek, an as-of date, and short sections. No walls of text. No emoji.
+- List related articles and posts with a relevance score from 0 to 100. Drop anything under 60. The URL, the date, and the topic must be real. Do not invent posts.
+- Show a left/right bias scale separately for the author, the account, and the post. Allowed values: Left, Lean left, Center, Lean right, Right, Unrated. Use a published rating and name the rater and the date checked. If none exists, the value is Unrated.
+- List people only when a cited source for this topic names them.
+- State the data sources used: series name, publisher, and URL.
 
-## Home page
+## Each run
 
-- Order reports by current public interest, then by how complete the statistical evidence is.
-- The prioritized report is the first thing under the title. The atlas remains available on the same page.
-- Interest framing may be edited. Statistics may not be typed into that framing.
+The execution date is the group. One pass does one slice, then deploys.
 
-## Each run — one slice
-
-1. If the preview is blank, the status bar is stuck, a known series shows as missing, or a report violates the contract above, fix that first.
+1. If the live app is blank, the map is missing, the status bar is stuck, a known series shows as missing, or a report violates the contract, fix that first.
 2. Otherwise search the public web for what is trending now in conflict, crime, drugs, diet, climate, income, and topics clearly tied to those.
-3. Do the first unfinished backlog item that this search justifies. One slice only. Prefer the report shell until it exists, then one full report for the top justified topic, then a cited series that report still lacks.
-4. Keep the paper / ink / copper UI. No auth. No emoji. No second database. Reports and findings go on the Railway PostGIS. Never delete a report or a finding.
-5. Ship gate: `node scripts/gpi-ship.mjs`, then `sh /workspace/startup.sh`, then `node scripts/browser-smoke.mjs`. Read both screenshots.
-6. Production render: `npm run preview:restart` and smoke the built app on 127.0.0.1:8081 with the dev JSON as `--baseline`. Then stop the 8081 preview.
-7. Append one line to the log. Leave the dev server running. Write `docs/LAST_SHIP.json`.
-8. Do not call Vercel, Railway, or a publish API. There is no deploy credential. A green production build is the ship. The live preview updates from the dev server. The public URL updates when the user publishes.
+3. Insert one `interest_findings` row for that search. Do not delete older findings. Re-rank `reports.priority` from the finding. Do not delete a report.
+4. Do the first unfinished backlog item that this search justifies. One slice only.
+5. Keep the paper / ink / copper UI. No auth wall. No emoji. No second database. No personal data about people who use the app.
+6. Ship gate: `node scripts/gpi-ship.mjs` when the slice touches the warehouse or the build. `npm run typecheck` at minimum for a UI slice.
+7. Update `docs/tracker.json` so the execution date lists every item touched, with `state` of `closed` only when the work is on `main`. Then `node scripts/sync-tracker.mjs`.
+8. Push `main`. Railway builds the Dockerfile and deploys. Migrations run at start. Confirm `/api/health` returns `"service":"global-population-intelligence"`.
+9. Append one line to the log below.
+
+GitHub Projects are not available to the automation token. Grouping is a milestone named with the execution date (`2026-11-25`), the label `run:YYYY-MM-DD`, and the assignee `meldspaces`. Closed issues use the completed reason. Open issues stay open until the work is on `main`.
 
 ## Standing
 
@@ -73,26 +69,29 @@ A report page must:
 
 ## Done
 
-- [x] Grok Build app with a cited country-year warehouse (1930–2026)
-- [x] Six series, each with rows: homicide, calories, conflict deaths, GDP per capita, alcohol, temperature anomaly
+- [x] Cited country-year warehouse (1930–2026), six series
 - [x] Status bar lists every series for the selected country and year, including real zeros
 - [x] Interactive map: hover, click-to-focus, zoom, year color
 - [x] Charts: trend, dual-axis overlay, scatter with Pearson r, rank bars, pins, year, log
-- [x] Public-interest strip. News text lives in `src/lib/gpi/featured.ts`. Numbers are computed from the warehouse
-- [x] Regression test: `src/lib/gpi/warehouse.test.ts`
+- [x] Home page topic rail and mosaic, ordered from `reports`
+- [x] Report pages: own URL, SEO, computed figures, sources, bias, people
+- [x] Report controls: year, country, map click, and chart mode recompute the figures
+- [x] Railway Dockerfile deploy on push to `main`
+- [x] Map container keeps its height so the canvas is not clipped
 
 ## Backlog
 
-- [x] Report page template that meets the contract (flexible, responsive, dynamic, formatted analysis, sources)
-- [ ] Home page prioritizes reports from current public interest
-- [ ] First full report for the leading trending topic that the warehouse can support, including validated articles and posts, bias marks, people, and sources
-- [ ] Further reports as new topics take the lead. Retire or demote a report when interest fades
-- [ ] One drug-prevalence series (opioids, stimulants, or benzodiazepines) from a citable country-year table
+- [ ] Home order follows a fresh public-interest search each run, written to `interest_findings` and never deleted
+- [ ] Record a published bias rater wherever one exists; leave the rest Unrated
+- [ ] One drug-prevalence series from a citable country-year table
 - [ ] City drilldown only where that table exists
 - [ ] Refugee or food-insecurity series if a stable public CSV is found
 
 ## Log
 
-- 2026-11-25 baseline: six OWID series, map, charts, status bar, featured strip. Production build green.
-- 2026-11-25 plan: public-interest research now drives report priority, home-page order, and written analysis. Report contract added.
-- 2026-11-25 report shell: year, country, map click, and chart mode now recompute the figures on each report page. Railway is serving the atlas.
+- 2026-11-25 baseline: six OWID series, map, charts, status bar, featured strip.
+- 2026-11-25 plan: public-interest research drives report priority, home-page order, and written analysis.
+- 2026-11-25 railway: Dockerfile image replaced the old app. Health check serves this service.
+- 2026-11-25 reports: year, country, map click, and chart mode recompute the figures.
+- 2026-11-25 map: the canvas was clipped because the MapLibre stylesheet collapsed the frame. The frame now keeps its height.
+- 2026-11-25 tracker: issues are grouped by the execution date 2026-11-25.

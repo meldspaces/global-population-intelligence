@@ -262,9 +262,12 @@ table button {
   background: transparent;
 }
 
-.map-canvas {
+.map-canvas,
+.map-frame > .map-canvas.maplibregl-map {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .map-fallback,

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" role="img" aria-labelledby="title desc">
+  <title id="title">How Global Population Intelligence adapts each day</title>
+  <desc id="desc">Public conversation is recorded, the country-year warehouse is read, reports are re-ranked, and a push to main deploys the same design.</desc>
+  <rect width="960" height="420" fill="#f4efe6"/>
+  <g fill="none" stroke="#1c1915" stroke-width="1.5">
+    <rect x="48" y="78" width="180" height="150" rx="18"/>
+    <rect x="276" y="78" width="180" height="150" rx="18"/>
+    <rect x="504" y="78" width="180" height="150" rx="18"/>
+    <rect x="732" y="78" width="180" height="150" rx="18"/>
+  </g>
+  <path d="M228 153h48M456 153h48M684 153h48" fill="none" stroke="#b4532a" stroke-width="2"/>
+  <path d="M822 228c40 70-40 130-150 140H210c-90 8-150-40-150-110" fill="none" stroke="#b4532a" stroke-width="2"/>
+  <text x="138" y="58" text-anchor="middle" fill="#1c1915" font-family="Georgia, serif" font-size="18">Public record</text>
+  <text x="138" y="150" text-anchor="middle" fill="#5c564c" font-family="system-ui, sans-serif" font-size="13">What people are</text>
+  <text x="138" y="170" text-anchor="middle" fill="#5c564c" font-family="system-ui, sans-serif" font-size="13">talking about today</text>
+  <text x="366" y="58" text-anchor="middle" fill="#1c1915" font-family="Georgia, serif" font-size="18">Warehouse</text>
+  <text x="366" y="150" text-anchor="middle" fill="#5c564c" font-family="system-ui, sans-serif" font-size="13">Country, year, series</text>
+  <text x="366" y="170" text-anchor="middle" fill="#5c564c" font-family="system-ui, sans-serif" font-size="13">Figures are computed</text>
+  <text x="594" y="58" text-anchor="middle" fill="#1c1915" font-family="Georgia, serif" font-size="18">Reports</text>
+  <text x="594" y="150" text-anchor="middle" fill="#5c564c" font-family="system-ui, sans-serif" font-size="13">Re-ranked, never deleted</text>
+  <text x="594" y="170" text-anchor="middle" fill="#5c564c" font-family="system-ui, sans-serif" font-size="13">Map, chart, sources</text>
+  <text x="822" y="58" text-anchor="middle" fill="#1c1915" font-family="Georgia, serif" font-size="18">Deploy</text>
+  <text x="822" y="150" text-anchor="middle" fill="#5c564c" font-family="system-ui, sans-serif" font-size="13">Push to main</text>
+  <text x="822" y="170" text-anchor="middle" fill="#5c564c" font-family="system-ui, sans-serif" font-size="13">Railway rebuilds</text>
+  <text x="480" y="360" text-anchor="middle" fill="#b4532a" font-family="system-ui, sans-serif" font-size="14">The next day starts from the findings already stored</text>
+</svg>

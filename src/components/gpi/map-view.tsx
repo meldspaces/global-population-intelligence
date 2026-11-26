@@ -190,6 +190,7 @@ export function MapView({ code, year, focus, onSelect }: MapViewProps) {
             if (typeof iso3 === "string" && iso3) selectRef.current(iso3);
           });
           mapRef.current = current;
+          current.resize();
           setReady(true);
         });
       } catch (error) {

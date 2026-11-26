@@ -1,0 +1,111 @@
+{
+  "owner": "meldspaces",
+  "repo": "global-population-intelligence",
+  "assignee": "meldspaces",
+  "runs": [
+    {
+      "date": "2026-11-25",
+      "items": [
+        {
+          "key": "warehouse",
+          "title": "Country-year warehouse, six series",
+          "state": "closed",
+          "reason": "completed",
+          "labels": ["area:warehouse"],
+          "body": "Shipped. Homicide, calories, battle deaths, GDP per person, alcohol, and temperature anomaly, 1930–2026, with a regression test. Figures are computed from the snapshot."
+        },
+        {
+          "key": "status-bar",
+          "title": "Status bar lists every series",
+          "state": "closed",
+          "reason": "completed",
+          "labels": ["area:atlas"],
+          "body": "Shipped. The bar follows the selected country and year, including real zeros. A missing row says so."
+        },
+        {
+          "key": "charts",
+          "title": "Flexible charts",
+          "state": "closed",
+          "reason": "completed",
+          "labels": ["area:atlas"],
+          "body": "Shipped. Trend, overlay, scatter with Pearson r, rank bars, pins, year range, and log scale."
+        },
+        {
+          "key": "home",
+          "title": "Home page topic rail and mosaic",
+          "state": "closed",
+          "reason": "completed",
+          "labels": ["area:reports"],
+          "body": "Shipped. The rail is the current top reports from the database. Cards use the report category. Nothing is hardcoded into the grid."
+        },
+        {
+          "key": "reports",
+          "title": "Report pages with their own URLs",
+          "state": "closed",
+          "reason": "completed",
+          "labels": ["area:reports"],
+          "body": "Shipped. Each report has SEO meta, computed analysis, sources, related links with relevance and a bias mark, and people only when a source names them. Reports are not deleted."
+        },
+        {
+          "key": "report-controls",
+          "title": "Report figures follow the year and country",
+          "state": "closed",
+          "reason": "completed",
+          "labels": ["area:reports"],
+          "body": "Shipped. Year, country search, map click, and chart mode recompute the figures on the report page."
+        },
+        {
+          "key": "railway",
+          "title": "Host the app on Railway",
+          "state": "closed",
+          "reason": "completed",
+          "labels": ["area:deploy"],
+          "body": "Shipped. The Dockerfile replaced the old service. A push to main deploys. Migrations run at start. Health check identifies this service."
+        },
+        {
+          "key": "map-blank",
+          "title": "Bug: map not appearing",
+          "state": "closed",
+          "reason": "completed",
+          "labels": ["bug", "area:map"],
+          "body": "The choropleth was drawn into a canvas and then clipped. MapLibre's stylesheet set the container to position:relative with no height, so the frame looked empty. The container now fills the frame. Confirmed by forcing that rule against the live page before the fix shipped."
+        },
+        {
+          "key": "daily-interest",
+          "title": "Write each day's public-interest finding and re-rank",
+          "state": "open",
+          "labels": ["area:automation"],
+          "body": "Open. The table exists and the first day's rows are seeded. A pass still has to search current public topics, insert a new interest_findings row, and update report priority without deleting reports or findings."
+        },
+        {
+          "key": "bias-raters",
+          "title": "Record a published bias rater where one exists",
+          "state": "open",
+          "labels": ["area:reports"],
+          "body": "Open. Bias values are Unrated unless a published rater is named. Do not invent a score."
+        },
+        {
+          "key": "drug-series",
+          "title": "Add one citable drug-prevalence series",
+          "state": "open",
+          "labels": ["area:warehouse"],
+          "body": "Open. Opioids, stimulants, or benzodiazepines, only from a stable country-year table. Do not estimate a series that has no source."
+        },
+        {
+          "key": "city-drilldown",
+          "title": "City drilldown only where a boundary table exists",
+          "state": "open",
+          "labels": ["area:map"],
+          "body": "Open. Not started. Skip until a real city boundary and a matching statistic exist."
+        },
+        {
+          "key": "refugee-food",
+          "title": "Refugee or food-insecurity series",
+          "state": "open",
+          "labels": ["area:warehouse"],
+          "body": "Open. Add only if a stable public CSV is found. Same database, new indicator rows."
+        }
+      ]
+    }
+  ]
+}
